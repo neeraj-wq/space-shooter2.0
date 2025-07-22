@@ -1,82 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>3D Space Shooter with Coins & Enemy Army</title>
+  <meta charset="UTF-8" />
+  <title>Space Shooter - Mobile Touch Version</title>
   <style>
-    body, html {
+    html, body {
       margin: 0;
       padding: 0;
-      overflow: hidden;
       background: black;
+      overflow: hidden;
       font-family: Arial, sans-serif;
+      height: 100%;
     }
 
-    #gameCanvas {
+    canvas {
       display: block;
-      margin: auto;
       background-size: cover;
     }
 
-    #overlay, #shop {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 800px;
-      height: 600px;
-      margin: auto;
-      color: white;
-      font-size: 20px;
-      text-align: center;
-      background: rgba(0, 0, 0, 0.8);
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 2;
-    }
-
-    #shop button {
-      margin: 5px;
-      padding: 10px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
     #hud {
-      position: absolute;
+      position: fixed;
       top: 10px;
       left: 10px;
       color: yellow;
-      font-size: 18px;
-      z-index: 1;
+      font-size: 3vw;
+      z-index: 2;
     }
+
+    #overlay, #shop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: none;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      z-index: 3;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      text-align: center;
+      font-size: 5vw;
+    }
+
+    #shop button {
+      font-size: 4vw;
+      margin: 5px;
+      padding: 10px;
+    }
+
+    .touch-controls {
+      position: fixed;
+      bottom: 10px;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      z-index: 4;
+    }
+
+    .touch-button {
+      background: rgba(255,255,255,0.1);
+      border: 2px solid white;
+      color: white;
+      font-size: 5vw;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <canvas id="gameCanvas"></canvas>
   <div id="hud">💰 Coins: <span id="coinCount">0</span></div>
 
   <div id="overlay">
-    <h1 style="color:lime;">🚀 3D Space Shooter</h1>
-    <p style="color:orange;">Press <strong style="color:violet;">SPACE</strong> to Start</p>
+    <h1 style="color:lime;">🚀 Space Shooter</h1>
+    <p style="color:orange;">Press SPACE or Tap Start</p>
+    <button class="touch-button" onclick="startGame()">Start</button>
   </div>
 
   <div id="shop">
     <h2 style="color:cyan;">🛒 Coin Shop</h2>
-    <button onclick="buyItem('plane')">Buy Extra Plane - 10 Coins</button>
-    <button onclick="buyItem('double')">Buy 2 Extra Planes - 20 Coins</button>
-    <button onclick="buyItem('army')">Buy Your Army (5 Planes) - 50 Coins</button>
-    <button onclick="buyItem('enemyArmy')">Enemy Army Wave - 0 Coins</button>
+    <button onclick="buyItem('plane')">Extra Plane - 10 Coins</button>
+    <button onclick="buyItem('double')">2 Planes - 20 Coins</button>
+    <button onclick="buyItem('army')">Your Army - 50 Coins</button>
+    <button onclick="buyItem('enemyArmy')">Enemy Army - 0 Coins</button>
     <button onclick="resumeGame()">Resume Game</button>
+  </div>
+
+  <div class="touch-controls">
+    <div class="touch-button" ontouchstart="left=true" ontouchend="left=false">👈</div>
+    <div class="touch-button" ontouchstart="right=true" ontouchend="right=false">👉</div>
+    <div class="touch-button" onclick="openShop()">🛒</div>
   </div>
 
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
+
     const overlay = document.getElementById("overlay");
     const shop = document.getElementById("shop");
     const coinCountSpan = document.getElementById("coinCount");
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
 
     const playerImg = new Image();
     playerImg.src = "http://4.bp.blogspot.com/-etyNTo8hpIE/Uf8BfJYeymI/AAAAAAAAA5Q/9emQpKVj1fo/s1600/fighter-01.png";
@@ -87,15 +121,10 @@
     const backgroundImageURL = "https://opengameart.org/sites/default/files/bg_space_seamless_0.bmp";
     canvas.style.backgroundImage = `url('${backgroundImageURL}')`;
 
-    let player = { x: 370, y: 500, width: 60, height: 60 };
-    let playerExtras = [];
-    let army = [];
-    let bullets = [];
-    let enemies = [];
-    let coins = 0;
-    let missedEnemies = 0;
-    let gameStarted = false;
-    let gameOver = false;
+    let player = { x: 100, y: canvas.height - 100, width: 60, height: 60 };
+    let playerExtras = [], army = [], bullets = [], enemies = [];
+    let coins = 0, missedEnemies = 0;
+    let gameStarted = false, gameOver = false;
 
     function autoFire() {
       if (!gameStarted || gameOver) return;
@@ -170,7 +199,7 @@
 
     function endGame() {
       gameOver = true;
-      overlay.innerHTML = `<h1 style='color:red;'>Game Over</h1><p style='color:orange;'>Coins: ${coins}</p><p>Press <strong style='color:lime;'>SPACE</strong> to Restart</p>`;
+      overlay.innerHTML = `<h1 style='color:red;'>Game Over</h1><p style='color:orange;'>Coins: ${coins}</p><button class="touch-button" onclick="startGame()">Restart</button>`;
       overlay.style.display = "flex";
     }
 
@@ -193,40 +222,46 @@
     }
     gameLoop();
 
+    // Keyboard Support
     document.addEventListener("keydown", function (e) {
-      if (e.key === "ArrowLeft" && player.x > 0) player.x -= 20;
-      if (e.key === "ArrowRight" && player.x < canvas.width - player.width) player.x += 20;
-      if (e.key === " " && (!gameStarted || gameOver)) {
-        gameStarted = true;
-        gameOver = false;
-        overlay.style.display = "none";
-        coins = 0;
-        missedEnemies = 0;
-        bullets = [];
-        enemies = [];
-        playerExtras = [];
-        army = [];
-        updateCoins();
-        player.x = 370;
-      }
-      if (e.key === "s") {
-        shop.style.display = "flex";
-        gameStarted = false;
-      }
+      if (e.key === "ArrowLeft") player.x -= 20;
+      if (e.key === "ArrowRight") player.x += 20;
+      if (e.key === " ") startGame();
+      if (e.key === "s") openShop();
     });
+
+    function startGame() {
+      gameStarted = true;
+      gameOver = false;
+      overlay.style.display = "none";
+      coins = 0;
+      missedEnemies = 0;
+      bullets = [];
+      enemies = [];
+      playerExtras = [];
+      army = [];
+      updateCoins();
+      player.x = canvas.width / 2 - player.width / 2;
+      player.y = canvas.height - 100;
+    }
 
     function resumeGame() {
       shop.style.display = "none";
       gameStarted = true;
     }
 
+    function openShop() {
+      gameStarted = false;
+      shop.style.display = "flex";
+    }
+
     function buyItem(type) {
       if (type === "plane" && coins >= 10) {
-        playerExtras.push({ x: player.x + 80, y: 500, width: 60, height: 60 });
+        playerExtras.push({ x: player.x + 80, y: player.y, width: 60, height: 60 });
         coins -= 10;
       } else if (type === "double" && coins >= 20) {
-        playerExtras.push({ x: player.x - 80, y: 500, width: 60, height: 60 });
-        playerExtras.push({ x: player.x + 80, y: 500, width: 60, height: 60 });
+        playerExtras.push({ x: player.x - 80, y: player.y, width: 60, height: 60 });
+        playerExtras.push({ x: player.x + 80, y: player.y, width: 60, height: 60 });
         coins -= 20;
       } else if (type === "army" && coins >= 50) {
         for (let i = 0; i < 5; i++) {
@@ -240,7 +275,13 @@
       }
       updateCoins();
     }
+
+    // Mobile touch control loop
+    let left = false, right = false;
+    setInterval(() => {
+      if (left && player.x > 0) player.x -= 10;
+      if (right && player.x < canvas.width - player.width) player.x += 10;
+    }, 30);
   </script>
 </body>
 </html>
-  
